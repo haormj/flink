@@ -195,7 +195,10 @@ public final class DebeziumJsonDeserializationSchema implements DeserializationS
 
         for (int metadataPos = 0; metadataPos < metadataArity; metadataPos++) {
             producedRow.setField(
-                    physicalArity + metadataPos, metadataConverters[metadataPos].convert(rootRow));
+                    physicalArity + metadataPos,
+                    metadataConverters[metadataPos].convert(rootRow, physicalRow));
+            // metadata converter will change RowKind
+            producedRow.setRowKind(physicalRow.getRowKind());
         }
 
         out.collect(producedRow);
@@ -294,8 +297,8 @@ public final class DebeziumJsonDeserializationSchema implements DeserializationS
             private static final long serialVersionUID = 1L;
 
             @Override
-            public Object convert(GenericRowData root, int unused) {
-                return metadata.converter.convert(root, pos);
+            public Object convert(GenericRowData root, GenericRowData physicalRow, int unused) {
+                return metadata.converter.convert(root, physicalRow, pos);
             }
         };
     }
@@ -308,9 +311,9 @@ public final class DebeziumJsonDeserializationSchema implements DeserializationS
                 private static final long serialVersionUID = 1L;
 
                 @Override
-                public Object convert(GenericRowData root, int unused) {
+                public Object convert(GenericRowData root, GenericRowData physicalRow, int unused) {
                     final GenericRowData payload = (GenericRowData) root.getField(0);
-                    return metadata.converter.convert(payload, pos);
+                    return metadata.converter.convert(payload, physicalRow, pos);
                 }
             };
         }
@@ -330,10 +333,10 @@ public final class DebeziumJsonDeserializationSchema implements DeserializationS
     interface MetadataConverter extends Serializable {
 
         // Method for top-level access.
-        default Object convert(GenericRowData row) {
-            return convert(row, -1);
+        default Object convert(GenericRowData row, GenericRowData physicalRow) {
+            return convert(row, physicalRow, -1);
         }
 
-        Object convert(GenericRowData row, int pos);
+        Object convert(GenericRowData row, GenericRowData physicalRow, int pos);
     }
 }

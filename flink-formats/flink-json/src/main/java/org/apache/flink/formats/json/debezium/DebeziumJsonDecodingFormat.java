@@ -141,7 +141,7 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         return row.getString(pos);
                     }
                 }),
@@ -155,7 +155,7 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         if (row.isNullAt(pos)) {
                             return null;
                         }
@@ -172,7 +172,7 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         final StringData timestamp =
                                 (StringData) readProperty(row, pos, KEY_SOURCE_TIMESTAMP);
                         if (timestamp == null) {
@@ -191,7 +191,7 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         return readProperty(row, pos, KEY_SOURCE_DATABASE);
                     }
                 }),
@@ -205,7 +205,7 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         return readProperty(row, pos, KEY_SOURCE_SCHEMA);
                     }
                 }),
@@ -219,7 +219,7 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         return readProperty(row, pos, KEY_SOURCE_TABLE);
                     }
                 }),
@@ -235,8 +235,41 @@ public class DebeziumJsonDecodingFormat implements DecodingFormat<Deserializatio
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    public Object convert(GenericRowData row, int pos) {
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
                         return row.getMap(pos);
+                    }
+                }),
+
+        CDC_ACTION_TYPE(
+                "cdc_action_type",
+                DataTypes.INT().nullable(),
+                true,
+                DataTypes.FIELD("cdc_action_type", DataTypes.INT()),
+                new MetadataConverter() {
+                    private static final long serialVersionUID = 1L;
+
+                    @Override
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
+                        int cdcActionType = physicalRow.getRowKind().toByteValue() + 1;
+                        physicalRow.setRowKind(RowKind.INSERT);
+                        return cdcActionType;
+                    }
+                }),
+
+        CDC_ACTION_TIME(
+                "cdc_action_time",
+                DataTypes.BIGINT().nullable(),
+                true,
+                DataTypes.FIELD("ts_ms", DataTypes.BIGINT()),
+                new MetadataConverter() {
+                    private static final long serialVersionUID = 1L;
+
+                    @Override
+                    public Object convert(GenericRowData row, GenericRowData physicalRow, int pos) {
+                        if (row.isNullAt(pos)) {
+                            return null;
+                        }
+                        return row.getLong(pos);
                     }
                 });
 
